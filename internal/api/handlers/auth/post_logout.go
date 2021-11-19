@@ -2,6 +2,7 @@ package auth
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"allaboutapps.dev/aw/go-starter/internal/api"
@@ -24,14 +25,14 @@ func postLogoutHandler(s *api.Server) echo.HandlerFunc {
 		log := util.LogFromContext(ctx)
 
 		var body types.PostLogoutPayload
-		if err := util.BindAndValidate(c, &body); err != nil {
+		if err := util.BindAndValidateBody(c, &body); err != nil {
 			return err
 		}
 
-		accessToken := auth.AccessTokenFromEchoContext(c)
+		token := auth.AccessTokenFromEchoContext(c)
 
 		if err := db.WithTransaction(ctx, s.DB, func(tx boil.ContextExecutor) error {
-			if _, err := accessToken.Delete(ctx, tx); err != nil {
+			if _, err := models.AccessTokens(models.AccessTokenWhere.Token.EQ(*token)).DeleteAll(ctx, tx); err != nil {
 				log.Debug().Err(err).Msg("Failed to delete access token")
 				return err
 			}
@@ -39,7 +40,7 @@ func postLogoutHandler(s *api.Server) echo.HandlerFunc {
 			if len(body.RefreshToken.String()) > 0 {
 				refreshToken, err := models.FindRefreshToken(ctx, tx, body.RefreshToken.String())
 				if err != nil {
-					if err == sql.ErrNoRows {
+					if errors.Is(err, sql.ErrNoRows) {
 						log.Debug().Msg("Did not find provided refresh token, ignoring")
 						return nil
 					}

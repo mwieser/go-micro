@@ -15,12 +15,14 @@ paths:
       - Management: []
       description: |-
         This endpoint returns 200 when the service is healthy.
-        It performs additional checks to ensure other parts of the system are available.
+        Returns an human readable string about the current service status.
+        In addition to readiness probes, it performs actual write probes.
+        Note that /-/healthy is private (shielded by the mgmt-secret) as it may expose sensitive information about your service.
       produces:
       - text/plain
       tags:
       - common
-      summary: Get healthy
+      summary: Get healthy (liveness probe)
       operationId: GetHealthyRoute
       responses:
         "200":
@@ -29,18 +31,36 @@ paths:
           description: Not ready.
   /-/ready:
     get:
-      description: This endpoint returns 200 when the service is ready to serve traffic (i.e. respond to queries).
+      description: |-
+        This endpoint returns 200 when the service is ready to serve traffic.
+        Does read-only probes apart from the general server ready state.
+        Note that /-/ready is typically public (and not shielded by a mgmt-secret), we thus prevent information leakage here and only return `"Ready."`.
       produces:
       - text/plain
       tags:
       - common
-      summary: Get ready
+      summary: Get ready (readiness probe)
       operationId: GetReadyRoute
       responses:
         "200":
           description: Ready.
         "521":
           description: Not ready.
+  /-/version:
+    get:
+      security:
+      - Management: []
+      description: This endpoint returns the module name, commit and build-date baked
+        into the app binary.
+      produces:
+      - text/plain
+      tags:
+      - common
+      summary: Get version
+      operationId: GetVersionRoute
+      responses:
+        "200":
+          description: ModuleName @ Commit (BuildDate)
   /api/v1/auth/change-password:
     post:
       security:
@@ -191,7 +211,7 @@ paths:
   /api/v1/auth/refresh:
     post:
       description: |-
-        Return a fresh set of access and refresh tokens if a valid refresh token was provided.
+        Returns a fresh set of access and refresh tokens if a valid refresh token was provided.
         The old refresh token used to authenticate the request will be invalidated.
       tags:
       - auth
@@ -362,6 +382,193 @@ definitions:
       key:
         description: Key of field failing validation
         type: string
+  nullableBool:
+    type: boolean
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Bool
+    example: true
+  nullableBoolSlice:
+    type: array
+    items:
+      type: boolean
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: BoolSlice
+  nullableFloat:
+    type: number
+    format: float
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float32
+    example: 1.5
+  nullableFloat32:
+    type: number
+    format: float
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float32
+    example: 1.5
+  nullableFloat32Slice:
+    type: array
+    items:
+      type: number
+      format: float
+      example: 1.5
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float32Slice
+  nullableFloat64:
+    type: number
+    format: float
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float64
+    example: 1.5
+  nullableFloat64Slice:
+    type: array
+    items:
+      type: number
+      format: float
+      example: 1.5
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float64Slice
+  nullableFloatSlice:
+    type: array
+    items:
+      type: number
+      format: float
+      example: 1.5
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Float32Slice
+  nullableInt:
+    type: integer
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int
+    example: 1234
+  nullableInt16:
+    type: integer
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int16
+    example: 1234
+  nullableInt16Slice:
+    type: array
+    items:
+      type: integer
+      example: 1234
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int16Slice
+  nullableInt32:
+    type: integer
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int32
+    example: 1234
+  nullableInt32Slice:
+    type: array
+    items:
+      type: integer
+      example: 1234
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int32Slice
+  nullableInt64:
+    type: integer
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int64
+    example: 1234
+  nullableInt64Slice:
+    type: array
+    items:
+      type: integer
+      example: 1234
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: Int64Slice
+  nullableIntSlice:
+    type: array
+    items:
+      type: integer
+      example: 1234
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: IntSlice
+  nullableString:
+    type: string
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: String
+    example: example
+  nullableStringSlice:
+    type: array
+    items:
+      type: string
+    x-go-type:
+      import:
+        package: github.com/allaboutapps/nullable
+      type: StringSlice
+  nullables:
+    type: object
+    properties:
+      nullableBool:
+        $ref: '#/definitions/nullableBool'
+      nullableBoolSlice:
+        $ref: '#/definitions/nullableBoolSlice'
+      nullableFloat:
+        $ref: '#/definitions/nullableFloat'
+      nullableFloat32:
+        $ref: '#/definitions/nullableFloat32'
+      nullableFloat32Slice:
+        $ref: '#/definitions/nullableFloat32Slice'
+      nullableFloat64:
+        $ref: '#/definitions/nullableFloat64'
+      nullableFloat64Slice:
+        $ref: '#/definitions/nullableFloat64Slice'
+      nullableFloatSlice:
+        $ref: '#/definitions/nullableFloatSlice'
+      nullableInt:
+        $ref: '#/definitions/nullableInt'
+      nullableInt16:
+        $ref: '#/definitions/nullableInt16'
+      nullableInt16Slice:
+        $ref: '#/definitions/nullableInt16Slice'
+      nullableInt32:
+        $ref: '#/definitions/nullableInt32'
+      nullableInt32Slice:
+        $ref: '#/definitions/nullableInt32Slice'
+      nullableInt64:
+        $ref: '#/definitions/nullableInt64'
+      nullableInt64Slice:
+        $ref: '#/definitions/nullableInt64Slice'
+      nullableIntSlice:
+        $ref: '#/definitions/nullableIntSlice'
+      nullableString:
+        $ref: '#/definitions/nullableString'
+      nullableStringSlice:
+        $ref: '#/definitions/nullableStringSlice'
   orderDir:
     type: string
     enum:
@@ -515,7 +722,8 @@ definitions:
         x-nullable: true
         example: 495179de-b771-48f0-aab2-8d23701b0f02
       provider:
-        description: Identifier of the provider the token is for (eg. "fcm", "apn"). Currently only "fcm" is supported.
+        description: Identifier of the provider the token is for (eg. "fcm", "apn").
+          Currently only "fcm" is supported.
         type: string
         maxLength: 500
         example: fcm
@@ -543,7 +751,8 @@ definitions:
         type: string
         example: Forbidden
       type:
-        description: Type of error returned, should be used for client-side error handling
+        description: Type of error returned, should be used for client-side error
+          handling
         type: string
         example: generic
   publicHttpValidationError:
@@ -577,11 +786,16 @@ responses:
       $ref: '#/definitions/publicHttpValidationError'
 securityDefinitions:
   Bearer:
+    description: |-
+      Access token for application access, **must** include "Bearer " prefix.
+      Example: `Bearer b4a94a42-3ea2-4af3-9699-8bcbfee6e6d2`
     type: apiKey
     name: Authorization
     in: header
     x-keyPrefix: 'Bearer '
   Management:
+    description: Management secret, used for monitoring and infrastructure related
+      calls
     type: apiKey
     name: mgmt-secret
     in: query

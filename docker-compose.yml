@@ -52,6 +52,14 @@ services:
       # optional: env for integresql client testing
       # INTEGRESQL_CLIENT_BASE_URL: "http://integresql:5000/api"
 
+      # optional: enable pretty print of log output
+      # intended use is for development and debugging purposes only
+      # not recommended to enable on production systems due to performance penalty and loss of parsing ability
+      SERVER_LOGGER_PRETTY_PRINT_CONSOLE: "true"
+
+      # optional: static management secret to easily call http://localhost:8080/-/healthy?mgmt-secret=mgmtpass
+      SERVER_MANAGEMENT_SECRET: "mgmtpass"
+
     # Uncomment the next four lines if you will use a ptrace-based debugger like C++, Go, and Rust.
     cap_add:
       - SYS_PTRACE
@@ -62,7 +70,7 @@ services:
     command: /bin/sh -c "while sleep 1000; do :; done"
 
   postgres:
-    image: postgres:12.2-alpine # should be the same version as used in .drone.yml, Dockerfile and live
+    image: postgres:12.4-alpine # should be the same version as used in .drone.yml, .github/workflows, Dockerfile and live
     # ATTENTION
     # fsync=off, synchronous_commit=off and full_page_writes=off
     # gives us a major speed up during local development and testing (~30%),
@@ -102,9 +110,7 @@ services:
       - "8025:8025"
 
   swaggerui:
-    image: swaggerapi/swagger-ui:v3.28.0
-    ports:
-      - "8081:8080"
+    image: swaggerapi/swagger-ui:v3.46.0
     environment:
       SWAGGER_JSON: "/api/swagger.yml"
     volumes:
@@ -112,6 +118,14 @@ services:
       - ./api:/api:ro,consistent
       # mount overwritten translator.js (intercept requests port 8081 to our local service on port 8080)
       - ./api/config/swagger-ui-local-translator.js:/usr/share/nginx/configurator/translator.js:ro,delegated
+
+  swaggerui-browser-sync:
+    image: allaboutapps/browser-sync:v2.26.14
+    command: start --proxy 'swaggerui:8080' --port 8081 --files "/api/*.yml"
+    volumes:
+      - ./api:/api:ro,consistent
+    ports:
+      - "8081:8081"
 
 volumes:
   # postgresql: declare a named volume to persist DB data

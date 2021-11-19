@@ -1,15 +1,21 @@
-package test
+package test_test
 
 import (
 	"net/http"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"allaboutapps.dev/aw/go-starter/internal/api"
+	"allaboutapps.dev/aw/go-starter/internal/config"
+	"allaboutapps.dev/aw/go-starter/internal/test"
 	"allaboutapps.dev/aw/go-starter/internal/util"
+	pUtil "allaboutapps.dev/aw/go-starter/internal/util"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestRequestPayload struct {
@@ -67,11 +73,8 @@ func (m *TestResponsePayload) UnmarshalBinary(b []byte) error {
 }
 
 func TestWithTestServer(t *testing.T) {
-
-	t.Parallel()
-
-	WithTestServer(t, func(s1 *api.Server) {
-		WithTestServer(t, func(s2 *api.Server) {
+	test.WithTestServer(t, func(s1 *api.Server) {
+		test.WithTestServer(t, func(s2 *api.Server) {
 
 			path := "/testing-f679dbac-62bb-445d-b7e8-9f2c71ca382c"
 
@@ -79,7 +82,7 @@ func TestWithTestServer(t *testing.T) {
 			s1.Echo.POST(path, func(c echo.Context) error {
 
 				var body TestRequestPayload
-				if err := util.BindAndValidate(c, &body); err != nil {
+				if err := util.BindAndValidateBody(c, &body); err != nil {
 					t.Fatal(err)
 				}
 
@@ -90,20 +93,52 @@ func TestWithTestServer(t *testing.T) {
 				return util.ValidateAndReturn(c, http.StatusOK, &response)
 			})
 
-			payload := GenericPayload{
+			payload := test.GenericPayload{
 				"name": "Mario",
 			}
 
-			res1 := PerformRequest(t, s1, "POST", path, payload, nil)
+			res1 := test.PerformRequest(t, s1, "POST", path, payload, nil)
 			assert.Equal(t, http.StatusOK, res1.Result().StatusCode)
 
 			var response1 TestResponsePayload
-			ParseResponseAndValidate(t, res1, &response1)
+			test.ParseResponseAndValidate(t, res1, &response1)
 
 			assert.Equal(t, "Mario", response1.Hello)
 
-			res2 := PerformRequest(t, s2, "POST", path, payload, nil)
+			res2 := test.PerformRequest(t, s2, "POST", path, payload, nil)
 			assert.Equal(t, http.StatusNotFound, res2.Result().StatusCode)
+
+		})
+	})
+
+}
+
+func TestWithTestServerFromDump(t *testing.T) {
+	dumpFile := filepath.Join(pUtil.GetProjectRootDir(), "/test/testdata/plain.sql")
+
+	serverConfig := config.DefaultServiceConfigFromEnv()
+	dumpConfig := test.DatabaseDumpConfig{DumpFile: dumpFile, ApplyMigrations: true, ApplyTestFixtures: true}
+
+	test.WithTestServerFromDump(t, dumpConfig, func(s1 *api.Server) {
+		test.WithTestServerConfigurableFromDump(t, serverConfig, dumpConfig, func(s2 *api.Server) {
+
+			var db1Name string
+			if err := s1.DB.QueryRow("SELECT current_database();").Scan(&db1Name); err != nil {
+				t.Fatal(err)
+			}
+
+			var db2Name string
+			if err := s2.DB.QueryRow("SELECT current_database();").Scan(&db2Name); err != nil {
+				t.Fatal(err)
+			}
+
+			require.NotEqual(t, db1Name, db2Name)
+
+			// same dumpConfig settings - must be same base template hash.
+			db1Hash := strings.Split(strings.Join(strings.Split(db1Name, "integresql_test_"), ""), "_")[0]
+			db2Hash := strings.Split(strings.Join(strings.Split(db2Name, "integresql_test_"), ""), "_")[0]
+
+			require.Equal(t, db1Hash, db2Hash)
 
 		})
 	})

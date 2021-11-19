@@ -19,8 +19,6 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
-var ()
-
 func PostRegisterRoute(s *api.Server) *echo.Route {
 	return s.Router.APIV1Auth.POST("/register", postRegisterHandler(s))
 }
@@ -31,7 +29,7 @@ func postRegisterHandler(s *api.Server) echo.HandlerFunc {
 		log := util.LogFromContext(ctx)
 
 		var body types.PostRegisterPayload
-		if err := util.BindAndValidate(c, &body); err != nil {
+		if err := util.BindAndValidateBody(c, &body); err != nil {
 			return err
 		}
 

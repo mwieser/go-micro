@@ -8,6 +8,7 @@ import (
 
 	"allaboutapps.dev/aw/go-starter/internal/config"
 	"allaboutapps.dev/aw/go-starter/internal/data"
+	dbutil "allaboutapps.dev/aw/go-starter/internal/util/db"
 	"github.com/spf13/cobra"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
@@ -17,18 +18,20 @@ var seedCmd = &cobra.Command{
 	Use:   "seed",
 	Short: "Inserts or updates fixtures to the database.",
 	Long:  `Uses upsert to add test data to the current environment.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := applyFixtures(); err != nil {
-			fmt.Printf("Error while applying fixtures: %v", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Applied all fixtures")
-	},
+	Run:   seedCmdFunc,
 }
 
 func init() {
 	dbCmd.AddCommand(seedCmd)
+}
+
+func seedCmdFunc(cmd *cobra.Command, args []string) {
+	if err := applyFixtures(); err != nil {
+		fmt.Printf("Error while seeding fixtures: %v", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Seeded all fixtures.")
 }
 
 func applyFixtures() error {
@@ -44,26 +47,20 @@ func applyFixtures() error {
 		return err
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
+	// insert fixtures in an auto-managed db transaction
+	return dbutil.WithTransaction(ctx, db, func(tx boil.ContextExecutor) error {
 
-	fixtures := data.Upserts()
+		fixtures := data.Upserts()
 
-	for _, fixture := range fixtures {
-		if err := fixture.Upsert(ctx, db, true, nil, boil.Infer(), boil.Infer()); err != nil {
-			if err := tx.Rollback(); err != nil {
+		for _, fixture := range fixtures {
+			if err := fixture.Upsert(ctx, tx, true, nil, boil.Infer(), boil.Infer()); err != nil {
+				fmt.Printf("Failed to upsert fixture: %v\n", err)
 				return err
 			}
-
-			return err
 		}
-	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
+		fmt.Printf("Upserted %d fixtures.\n", len(fixtures))
+		return nil
 
-	return nil
+	})
 }

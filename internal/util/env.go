@@ -3,7 +3,6 @@ package util
 import (
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,9 +10,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	mgmtSecretLen = 16
+)
+
 var (
-	projectRootDir string
-	dirOnce        sync.Once
+	mgmtSecret     string
+	mgmtSecretOnce sync.Once
 )
 
 func GetEnv(key string, defaultVal string) string {
@@ -22,6 +25,24 @@ func GetEnv(key string, defaultVal string) string {
 	}
 
 	return defaultVal
+}
+
+func GetEnvEnum(key string, defaultVal string, allowedValues []string) string {
+	if !ContainsString(allowedValues, defaultVal) {
+		log.Panic().Str("key", key).Str("value", defaultVal).Msg("Default value is not in the allowed values list.")
+	}
+
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultVal
+	}
+
+	if !ContainsString(allowedValues, val) {
+		log.Error().Str("key", key).Str("value", val).Msg("Value is not allowed. Fallback to default value.")
+		return defaultVal
+	}
+
+	return val
 }
 
 func GetEnvAsInt(key string, defaultVal int) int {
@@ -64,6 +85,7 @@ func GetEnvAsBool(key string, defaultVal bool) bool {
 	return defaultVal
 }
 
+// GetEnvAsStringArr reads ENV and returns the values split by separator.
 func GetEnvAsStringArr(key string, defaultVal []string, separator ...string) []string {
 	strVal := GetEnv(key, "")
 
@@ -79,13 +101,24 @@ func GetEnvAsStringArr(key string, defaultVal []string, separator ...string) []s
 	return strings.Split(strVal, sep)
 }
 
+// GetEnvAsStringArrTrimmed reads ENV and returns the whitespace trimmed values split by separator.
+func GetEnvAsStringArrTrimmed(key string, defaultVal []string, separator ...string) []string {
+	slc := GetEnvAsStringArr(key, defaultVal, separator...)
+
+	for i := range slc {
+		slc[i] = strings.TrimSpace(slc[i])
+	}
+
+	return slc
+}
+
 func GetEnvAsURL(key string, defaultVal string) *url.URL {
 	strVal := GetEnv(key, "")
 
 	if len(strVal) == 0 {
 		u, err := url.Parse(defaultVal)
 		if err != nil {
-			log.Panic().Err(err).Msg("Failed to parse default value for env variable as URL")
+			log.Panic().Str("key", key).Str("defaultVal", defaultVal).Err(err).Msg("Failed to parse default value for env variable as URL")
 		}
 
 		return u
@@ -93,21 +126,33 @@ func GetEnvAsURL(key string, defaultVal string) *url.URL {
 
 	u, err := url.Parse(strVal)
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to parse env variable as URL")
+		log.Panic().Str("key", key).Str("strVal", strVal).Err(err).Msg("Failed to parse env variable as URL")
 	}
 
 	return u
 }
 
-func GetProjectRootDir() string {
-	dirOnce.Do(func() {
-		ex, err := os.Executable()
+// GetMgmtSecret returns the management secret for the app server, mainly used by health check and readiness endpoints.
+// It first attempts to retrieve a value from the given environment variable and generates a cryptographically secure random string
+// should no env var have been set.
+// Failure to generate a random string will cause a panic as secret security cannot be guaranteed otherwise.
+// Subsequent calls to GetMgmtSecret during the server's runtime will always return the same randomly generated secret for consistency.
+func GetMgmtSecret(envKey string) string {
+	val := GetEnv(envKey, "")
+
+	if len(val) > 0 {
+		return val
+	}
+
+	mgmtSecretOnce.Do(func() {
+		var err error
+		mgmtSecret, err = GenerateRandomHexString(mgmtSecretLen)
 		if err != nil {
-			log.Panic().Err(err).Msg("Failed to get executable path while retrieving project root directory")
+			log.Panic().Err(err).Msg("Failed to generate random management secret")
 		}
 
-		projectRootDir = GetEnv("PROJECT_ROOT_DIR", filepath.Dir(ex))
+		log.Warn().Str("envKey", envKey).Str("mgmtSecret", mgmtSecret).Msg("Could not retrieve management secret from env key, using randomly generated one")
 	})
 
-	return projectRootDir
+	return mgmtSecret
 }

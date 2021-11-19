@@ -3,8 +3,8 @@ package middleware
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -38,12 +38,12 @@ func DefaultRequestBodyLogSkipper(req *http.Request) bool {
 
 // ResponseBodyLogSkipper defines a function to skip logging certain response bodies.
 // Returning true skips logging the payload of the response.
-type ResponseBodyLogSkipper func(res *echo.Response) bool
+type ResponseBodyLogSkipper func(req *http.Request, res *echo.Response) bool
 
 // DefaultResponseBodyLogSkipper returns false for all responses with Content-Type
 // application/json, preventing logging for all other types of payloads as those
 // might contain binary or URL-encoded data unfit for logging purposes.
-func DefaultResponseBodyLogSkipper(res *echo.Response) bool {
+func DefaultResponseBodyLogSkipper(req *http.Request, res *echo.Response) bool {
 	contentType := res.Header().Get(echo.HeaderContentType)
 	switch {
 	case strings.HasPrefix(contentType, echo.MIMEApplicationJSON):
@@ -196,19 +196,19 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 					Str("bytes_in", in),
 				).Logger()
 			le := l.WithLevel(config.Level)
-			req = req.WithContext(l.WithContext(req.Context()))
+			req = req.WithContext(l.WithContext(context.WithValue(req.Context(), util.CTXKeyRequestID, id)))
 
 			if config.LogRequestBody && !config.RequestBodyLogSkipper(req) {
-				var reqBody []byte = nil
+				var reqBody []byte
 				var err error
 				if req.Body != nil {
-					reqBody, err = ioutil.ReadAll(req.Body)
+					reqBody, err = io.ReadAll(req.Body)
 					if err != nil {
 						l.Error().Err(err).Msg("Failed to read body while logging request")
 						return err
 					}
 
-					req.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+					req.Body = io.NopCloser(bytes.NewBuffer(reqBody))
 				}
 
 				le = le.Bytes("req_body", config.RequestBodyLogReplacer(reqBody))
@@ -258,7 +258,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 					Err(err),
 				)
 
-			if config.LogResponseBody && !config.ResponseBodyLogSkipper(res) {
+			if config.LogResponseBody && !config.ResponseBodyLogSkipper(req, res) {
 				lle = lle.Bytes("res_body", config.ResponseBodyLogReplacer(resBody.Bytes()))
 			}
 			if config.LogResponseHeader {

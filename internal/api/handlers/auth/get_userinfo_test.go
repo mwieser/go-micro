@@ -15,8 +15,6 @@ import (
 )
 
 func TestGetUserInfo(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()
@@ -29,6 +27,7 @@ func TestGetUserInfo(t *testing.T) {
 
 		assert.Equal(t, fixtures.User1.ID, *response.Sub)
 		assert.Equal(t, strfmt.Email(fixtures.User1.Username.String), response.Email)
+		test.Snapshoter.Skip([]string{"UpdatedAt"}).Save(t, response)
 
 		for _, scope := range fixtures.User1.Scopes {
 			assert.Contains(t, response.Scopes, scope)
@@ -42,8 +41,6 @@ func TestGetUserInfo(t *testing.T) {
 }
 
 func TestGetUserInfoMinimal(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()

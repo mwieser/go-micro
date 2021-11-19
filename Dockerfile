@@ -1,16 +1,13 @@
 ### -----------------------
 # --- Stage: development
+# --- Purpose: Local development environment
 # --- https://hub.docker.com/_/golang
 # --- https://github.com/microsoft/vscode-remote-try-go/blob/master/.devcontainer/Dockerfile
 ### -----------------------
-FROM golang:1.15.0 AS development
+FROM golang:1.17.1-buster AS development
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
-
-# https://github.com/go-modules-by-example/index/blob/master/010_tools/README.md#walk-through
-ENV GOBIN /app/bin
-ENV PATH $GOBIN:$PATH
 
 # Our Makefile / env fully supports parallel job execution
 ENV MAKEFLAGS "-j 8 --no-print-directory"
@@ -42,6 +39,8 @@ RUN apt-get update \
     # https://github.com/microsoft/vscode-remote-try-go/blob/master/.devcontainer/Dockerfile
     # https://raw.githubusercontent.com/microsoft/vscode-dev-containers/master/script-library/common-debian.sh
     #
+    # icu-devtools: https://stackoverflow.com/questions/58736399/how-to-get-vscode-liveshare-extension-working-when-running-inside-vscode-remote
+    # graphviz: https://github.com/google/pprof#building-pprof
     # -- START DEVELOPMENT --
     apt-utils \
     dialog \
@@ -54,7 +53,10 @@ RUN apt-get update \
     sudo \
     bash-completion \
     bsdmainutils \
+    graphviz \
+    xz-utils \
     postgresql-client-12 \
+    icu-devtools \
     # --- END DEVELOPMENT ---
     # 
     && apt-get clean \
@@ -69,15 +71,15 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
 
 ENV LANG en_US.UTF-8
 
-# sql pgFormatter: Install the same version of pg_formatter as used in your editors, as of 2020-04 thats v4.3
+# sql pgFormatter: Integrates with vscode-pgFormatter (we pin pgFormatter.pgFormatterPath for the extension to this version)
 # requires perl to be installed
 # https://github.com/bradymholt/vscode-pgFormatter/commits/master
 # https://github.com/darold/pgFormatter/releases
 RUN mkdir -p /tmp/pgFormatter \
     && cd /tmp/pgFormatter \
-    && wget https://github.com/darold/pgFormatter/archive/v4.3.tar.gz \
-    && tar xzf v4.3.tar.gz \
-    && cd pgFormatter-4.3 \
+    && wget https://github.com/darold/pgFormatter/archive/v5.0.tar.gz \
+    && tar xzf v5.0.tar.gz \
+    && cd pgFormatter-5.0 \
     && perl Makefile.PL \
     && make && make install \
     && rm -rf /tmp/pgFormatter 
@@ -86,8 +88,8 @@ RUN mkdir -p /tmp/pgFormatter \
 # https://github.com/gotestyourself/gotestsum/releases
 RUN mkdir -p /tmp/gotestsum \
     && cd /tmp/gotestsum \
-    && wget https://github.com/gotestyourself/gotestsum/releases/download/v0.5.2/gotestsum_0.5.2_linux_amd64.tar.gz \
-    && tar xzf gotestsum_0.5.2_linux_amd64.tar.gz \
+    && wget https://github.com/gotestyourself/gotestsum/releases/download/v1.7.0/gotestsum_1.7.0_linux_amd64.tar.gz \
+    && tar xzf gotestsum_1.7.0_linux_amd64.tar.gz \
     && cp gotestsum /usr/local/bin/gotestsum \
     && rm -rf /tmp/gotestsum 
 
@@ -95,13 +97,32 @@ RUN mkdir -p /tmp/gotestsum \
 # https://github.com/golangci/golangci-lint#binary
 # https://github.com/golangci/golangci-lint/releases
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-    | sh -s -- -b $(go env GOPATH)/bin v1.30.0
+    | sh -s -- -b $(go env GOPATH)/bin v1.42.1
 
 # go swagger: (this package should NOT be installed via go get) 
 # https://github.com/go-swagger/go-swagger/releases
 RUN curl -o /usr/local/bin/swagger -L'#' \
-    "https://github.com/go-swagger/go-swagger/releases/download/v0.25.0/swagger_linux_amd64" \
+    "https://github.com/go-swagger/go-swagger/releases/download/v0.26.1/swagger_linux_amd64" \
     && chmod +x /usr/local/bin/swagger
+
+# lichen: go license util 
+# TODO: Install from static binary as soon as it becomes available.
+# https://github.com/uw-labs/lichen/releases
+RUN go install github.com/uw-labs/lichen@v0.1.4
+
+# watchexec
+# https://github.com/watchexec/watchexec/releases
+RUN mkdir -p /tmp/watchexec \
+    && cd /tmp/watchexec \
+    && wget https://github.com/watchexec/watchexec/releases/download/cli-v1.17.0/watchexec-1.17.0-x86_64-unknown-linux-gnu.tar.xz \
+    && tar xf watchexec-1.17.0-x86_64-unknown-linux-gnu.tar.xz \
+    && cp watchexec-1.17.0-x86_64-unknown-linux-gnu/watchexec /usr/local/bin/watchexec \
+    && rm -rf /tmp/watchexec
+
+# gsdev
+# The sole purpose of the "gsdev" cli util is to provide a handy short command for the following (all args are passed):
+# go run -tags scripts /app/scripts/main.go "$@"
+RUN printf '#!/bin/bash\nset -Eeo pipefail\ncd /app && go run -tags scripts ./scripts/main.go "$@"' > /usr/bin/gsdev && chmod 755 /usr/bin/gsdev
 
 # linux permissions / vscode support: Add user to avoid linux file permission issues
 # Detail: Inside the container, any mounted files/folders will have the exact same permissions
@@ -133,8 +154,18 @@ RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
 # Note that this should be the final step after installing all build deps 
 RUN mkdir -p /$GOPATH/pkg && chown -R $USERNAME /$GOPATH
 
+# $GOBIN is where our own compiled binaries will live and other go.mod / VSCode binaries will be installed.
+# It should always come AFTER our other $PATH segments and should be earliest targeted in stage "builder", 
+# as /app/bin will the shadowed by a volume mount via docker-compose!
+# E.g. "which golangci-lint" should report "/go/bin" not "/app/bin" (where VSCode will place it).
+# https://github.com/go-modules-by-example/index/blob/master/010_tools/README.md#walk-through
+WORKDIR /app
+ENV GOBIN /app/bin
+ENV PATH $PATH:$GOBIN
+
 ### -----------------------
 # --- Stage: builder
+# --- Purpose: Statically built binaries and CI environment
 ### -----------------------
 
 FROM development as builder
@@ -146,41 +177,54 @@ RUN make modules
 COPY tools.go /app/tools.go
 RUN make tools
 COPY . /app/
-
-### -----------------------
-# --- Stage: builder-app
-### -----------------------
-
-FROM builder as builder-app
 RUN make go-build
 
 ### -----------------------
 # --- Stage: app
+# --- Purpose: Image for actual deployment
+# --- Prefer https://github.com/GoogleContainerTools/distroless over
+# --- debian:buster-slim https://hub.docker.com/_/debian (if you need apt-get).
 ### -----------------------
 
-FROM debian:buster-slim as app
+# Distroless images are minimal and lack shell access.
+# https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
+# The :debug image provides a busybox shell to enter (base-debian10 only, not static).
+# https://github.com/GoogleContainerTools/distroless#debug-images
+FROM gcr.io/distroless/base-debian10:debug as app
 
-RUN apt-get update \
-    && apt-get install -y \
-    #
-    # Mandadory minimal linux packages
-    # Installed at development stage and app stage
-    # Do not forget to add mandadory linux packages to the base development Dockerfile stage above!
-    #
-    # -- START MANDADORY --
-    ca-certificates \
-    # --- END MANDADORY ---
-    #
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# FROM debian:buster-slim as app
+# RUN apt-get update \
+#     && apt-get install -y \
+#     #
+#     # Mandadory minimal linux packages
+#     # Installed at development stage and app stage
+#     # Do not forget to add mandadory linux packages to the base development Dockerfile stage above!
+#     #
+#     # -- START MANDADORY --
+#     ca-certificates \
+#     # --- END MANDADORY ---
+#     #
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder-app /app/bin/app /app/bin/sql-migrate /app/
-COPY --from=builder-app /app/dbconfig.yml /app/
-COPY --from=builder-app /app/api/swagger.yml /app/api/
-COPY --from=builder-app /app/assets /app/assets/
-COPY --from=builder-app /app/migrations /app/migrations/
-COPY --from=builder-app /app/web /app/web/
+COPY --from=builder /app/bin/app /app/
+COPY --from=builder /app/api/swagger.yml /app/api/
+COPY --from=builder /app/assets /app/assets/
+COPY --from=builder /app/migrations /app/migrations/
+COPY --from=builder /app/web /app/web/
 
 WORKDIR /app
 
-CMD [ "/bin/sh", "-c", "/app/sql-migrate up && /app/app server" ]
+# Must comply to vector form
+# https://github.com/GoogleContainerTools/distroless#entrypoints
+# Sample usage of this image:
+# docker run <image> help
+# docker run <image> db migrate
+# docker run <image> db seed
+# docker run <image> env
+# docker run <image> probe readiness
+# docker run <image> probe liveness
+# docker run <image> server
+# docker run <image> server --migrate
+ENTRYPOINT ["/app/app"]
+CMD ["server", "--migrate"]

@@ -16,12 +16,11 @@ import (
 )
 
 func TestPostUpdatePushTokenSuccess(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()
 
+		//nolint:gosec
 		testToken := "869f6deb-73e6-4691-9d40-2a2a794006cf"
 		testProvider := "fcm"
 
@@ -44,12 +43,11 @@ func TestPostUpdatePushTokenSuccess(t *testing.T) {
 }
 
 func TestPostUpdatePushTokenSuccessWithOldToken(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()
 
+		//nolint:gosec
 		oldToken := "6803ccb4-c91d-47b2-960e-291afa5e29cd"
 
 		oldPushToken := models.PushToken{
@@ -60,6 +58,7 @@ func TestPostUpdatePushTokenSuccessWithOldToken(t *testing.T) {
 		err := oldPushToken.Insert(ctx, s.DB, boil.Infer())
 		require.NoError(t, err)
 
+		//nolint:gosec
 		testToken := "af55b6cf-1fb0-4bb7-960c-25268a5ce7c3"
 		testProvider := "fcm"
 
@@ -86,12 +85,11 @@ func TestPostUpdatePushTokenSuccessWithOldToken(t *testing.T) {
 }
 
 func TestPostUpdatePushTokenWithDuplicateToken(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()
 
+		//nolint:gosec
 		oldToken := "6803ccb4-c91d-47b2-960e-291afa5e29cd"
 
 		oldPushToken := models.PushToken{
@@ -136,12 +134,11 @@ func TestPostUpdatePushTokenWithDuplicateToken(t *testing.T) {
 }
 
 func TestPostUpdatePushTokenWithOldTokenNotfound(t *testing.T) {
-	t.Parallel()
-
 	test.WithTestServer(t, func(s *api.Server) {
 		ctx := context.Background()
 		fixtures := test.Fixtures()
 
+		//nolint:gosec
 		oldToken := "cc08624a-b40d-4b8e-bbfe-f62aabb47592"
 
 		oldPushToken := models.PushToken{
@@ -155,6 +152,7 @@ func TestPostUpdatePushTokenWithOldTokenNotfound(t *testing.T) {
 		oldCnt, err := fixtures.User1.PushTokens().Count(ctx, s.DB)
 		assert.NoError(t, err)
 
+		//nolint:gosec
 		testToken := "8e4ad85f-cbb6-4ef3-a455-d9d8bd8917b3"
 		testProvider := "fcm"
 

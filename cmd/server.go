@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +17,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	probeFlag   string = "probe"
+	migrateFlag string = "migrate"
+	seedFlag    string = "seed"
+)
+
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
 	Use:   "server",
@@ -25,11 +32,45 @@ var serverCmd = &cobra.Command{
 Requires configuration through ENV and
 and a fully migrated PostgreSQL database.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		probeReadiness, err := cmd.Flags().GetBool(probeFlag)
+		if err != nil {
+			fmt.Printf("Error while parsing flags: %v\n", err)
+			os.Exit(1)
+		}
+
+		applyMigrations, err := cmd.Flags().GetBool(migrateFlag)
+		if err != nil {
+			fmt.Printf("Error while parsing flags: %v\n", err)
+			os.Exit(1)
+		}
+
+		seedFixtures, err := cmd.Flags().GetBool(seedFlag)
+		if err != nil {
+			fmt.Printf("Error while parsing flags: %v\n", err)
+			os.Exit(1)
+		}
+
+		if probeReadiness {
+			runReadiness(true)
+		}
+
+		if applyMigrations {
+			migrateCmdFunc(cmd, args)
+		}
+
+		if seedFixtures {
+			seedCmdFunc(cmd, args)
+		}
+
 		runServer()
 	},
 }
 
 func init() {
+	serverCmd.Flags().BoolP(probeFlag, "p", false, "Probe readiness before startup.")
+	serverCmd.Flags().BoolP(migrateFlag, "m", false, "Apply migrations before startup.")
+	serverCmd.Flags().BoolP(seedFlag, "s", false, "Seed fixtures into database before startup.")
 	rootCmd.AddCommand(serverCmd)
 }
 
@@ -38,6 +79,11 @@ func runServer() {
 
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.SetGlobalLevel(config.Logger.Level)
+	if config.Logger.PrettyPrintConsole {
+		log.Logger = log.Output(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+			w.TimeFormat = "15:04:05"
+		}))
+	}
 
 	s := api.NewServer(config)
 
@@ -60,7 +106,11 @@ func runServer() {
 
 	go func() {
 		if err := s.Start(); err != nil {
-			log.Fatal().Err(err).Msg("Failed to start server")
+			if err == http.ErrServerClosed {
+				log.Info().Msg("Server closed")
+			} else {
+				log.Fatal().Err(err).Msg("Failed to start server")
+			}
 		}
 	}()
 

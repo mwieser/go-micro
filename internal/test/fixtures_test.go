@@ -1,4 +1,4 @@
-package test
+package test_test
 
 import (
 	"context"
@@ -6,17 +6,15 @@ import (
 	"testing"
 
 	"allaboutapps.dev/aw/go-starter/internal/models"
+	"allaboutapps.dev/aw/go-starter/internal/test"
 	_ "github.com/lib/pq"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 func TestFixturesReload(t *testing.T) {
-
-	t.Parallel()
-
-	WithTestDatabase(t, func(db *sql.DB) {
-		err := Fixtures().User1.Reload(context.Background(), db)
+	test.WithTestDatabase(t, func(db *sql.DB) {
+		err := test.Fixtures().User1.Reload(context.Background(), db)
 
 		if err != nil {
 			t.Error("failed to reload")
@@ -28,10 +26,7 @@ func TestFixturesReload(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-
-	t.Parallel()
-
-	WithTestDatabase(t, func(db *sql.DB) {
+	test.WithTestDatabase(t, func(db *sql.DB) {
 
 		userNew := models.User{
 			ID:       "6d00d09b-fab3-43d8-a163-279fe7ba533e",
@@ -51,12 +46,9 @@ func TestInsert(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	test.WithTestDatabase(t, func(db *sql.DB) {
 
-	t.Parallel()
-
-	WithTestDatabase(t, func(db *sql.DB) {
-
-		originalUser1 := Fixtures().User1
+		originalUser1 := test.Fixtures().User1
 
 		updatedUser1 := models.User(*originalUser1)
 
@@ -86,9 +78,9 @@ func TestUpdate(t *testing.T) {
 	})
 
 	// with another testdatabase:
-	WithTestDatabase(t, func(db *sql.DB) {
+	test.WithTestDatabase(t, func(db *sql.DB) {
 
-		originalUser1 := Fixtures().User1
+		originalUser1 := test.Fixtures().User1
 
 		// ensure our fixture is the same again!
 		if originalUser1.Username != null.StringFrom("user1@example.com") {

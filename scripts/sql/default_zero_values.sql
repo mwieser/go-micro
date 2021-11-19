@@ -30,7 +30,6 @@
 --
 -- https://stackoverflow.com/questions/8146448/get-the-default-values-of-table-columns-in-postgres
 -- https://dba.stackexchange.com/questions/205471/why-does-information-schema-have-yes-and-no-character-strings-rather-than-bo
-
 CREATE OR REPLACE FUNCTION check_default_go_sql_zero_values ()
     RETURNS SETOF information_schema.columns
     AS $BODY$
@@ -48,7 +47,8 @@ BEGIN
             OR (data_type IN ('char', 'character', 'varchar', 'character varying', 'text')
                 AND column_default NOT LIKE concat('''''', '::%'))
             OR (data_type IN ('smallint', 'integer', 'bigint', 'smallserial', 'serial', 'bigserial')
-                AND column_default <> '0')
+                AND (column_default <> '0'
+                    AND column_default NOT LIKE 'nextval(%'))
             OR (data_type IN ('decimal', 'numeric', 'real', 'double precision')
                 AND column_default <> '0.0'));
 END
@@ -73,11 +73,11 @@ BEGIN
         check_default_go_sql_zero_values ()
         LOOP
             RAISE WARNING ' %.% % : INVALID DEFAULT ''%''', item.table_name, item.column_name, item.data_type, item.column_default USING HINT = to_json(item);
-        END LOOP;
+END LOOP;
     IF FOUND THEN
         RAISE EXCEPTION 'NOT NULL columns require the respective go zero value () AS their DEFAULT value or no DEFAULT at all'
             USING HINT = '0 for integer types, 0.0 for floating point numbers, false for booleans, "" for strings';
-    END IF;
+        END IF;
 END;
 $$
 LANGUAGE plpgsql;
