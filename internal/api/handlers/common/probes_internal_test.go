@@ -2,12 +2,11 @@ package common
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"testing"
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/mwieser/go-micro/internal/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,22 +26,6 @@ func TestDummyDeadlineWithinOneSec(t *testing.T) {
 	receivedDeadline := ensureProbeDeadlineFromContext(ctx)
 	assert.WithinDuration(t, time.Now().Add(1*time.Second), receivedDeadline, 100*time.Millisecond)
 
-}
-
-func TestProbeDatabasePingableDeadline(t *testing.T) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
-	defer cancel()
-
-	_, err := probeDatabasePingable(ctx, &sql.DB{})
-	assert.Truef(t, err == util.ErrWaitTimeout || err == context.DeadlineExceeded, "err must be util.ErrWaitTimeout or context.DeadlineExceeded but is %v", err)
-}
-
-func TestProbeDatabaseNextHealthSequenceDeadline(t *testing.T) {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now())
-	defer cancel()
-
-	_, err := probeDatabaseNextHealthSequence(ctx, &sql.DB{})
-	assert.Truef(t, err == util.ErrWaitTimeout || err == context.DeadlineExceeded, "err must be util.ErrWaitTimeout or context.DeadlineExceeded but is %v", err)
 }
 
 func TestProbePathWriteablePermissionContextDeadline(t *testing.T) {

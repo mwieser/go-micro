@@ -15,9 +15,9 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// PublicHTTPValidationError public Http validation error
+// PublicHTTPValidationError public HTTP validation error
 //
-// swagger:model publicHttpValidationError
+// swagger:model PublicHTTPValidationError
 type PublicHTTPValidationError struct {
 	PublicHTTPError
 
@@ -71,7 +71,7 @@ func (m PublicHTTPValidationError) MarshalJSON() ([]byte, error) {
 	return swag.ConcatJSON(_parts...), nil
 }
 
-// Validate validates this public Http validation error
+// Validate validates this public HTTP validation error
 func (m *PublicHTTPValidationError) Validate(formats strfmt.Registry) error {
 	var res []error
 
@@ -115,7 +115,7 @@ func (m *PublicHTTPValidationError) validateValidationErrors(formats strfmt.Regi
 	return nil
 }
 
-// ContextValidate validate this public Http validation error based on the context it is used
+// ContextValidate validate this public HTTP validation error based on the context it is used
 func (m *PublicHTTPValidationError) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 

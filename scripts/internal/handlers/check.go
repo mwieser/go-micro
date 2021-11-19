@@ -14,10 +14,10 @@ import (
 	"strings"
 	"sync"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/router"
-	"allaboutapps.dev/aw/go-starter/internal/config"
-	"allaboutapps.dev/aw/go-starter/internal/types"
+	"github.com/mwieser/go-micro/internal/api"
+	"github.com/mwieser/go-micro/internal/api/router"
+	"github.com/mwieser/go-micro/internal/config"
+	"github.com/mwieser/go-micro/internal/types"
 	"github.com/rs/zerolog"
 )
 

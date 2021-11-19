@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
-	"allaboutapps.dev/aw/go-starter/internal/api/handlers/common"
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/mwieser/go-micro/internal/api/handlers/common"
+	"github.com/mwieser/go-micro/internal/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -45,16 +44,10 @@ func init() {
 func runLiveness(verbose bool) {
 	config := config.DefaultServiceConfigFromEnv()
 
-	db, err := sql.Open("postgres", config.Database.ConnectionString())
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to the database")
-	}
-	defer db.Close()
-
 	ctx, cancel := context.WithTimeout(context.Background(), config.Management.LivenessTimeout)
 	defer cancel()
 
-	str, errs := common.ProbeLiveness(ctx, db, config.Management.ProbeWriteablePathsAbs, config.Management.ProbeWriteableTouchfile)
+	str, errs := common.ProbeLiveness(ctx, config.Management.ProbeWriteablePathsAbs, config.Management.ProbeWriteableTouchfile)
 
 	if verbose {
 		fmt.Print(str)

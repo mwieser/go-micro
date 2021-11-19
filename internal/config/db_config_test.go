@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/mwieser/go-micro/internal/config"
 )
 
 // via https://github.com/allaboutapps/integresql/blob/master/pkg/manager/database_config_test.go

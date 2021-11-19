@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/api/httperrors"
-	"allaboutapps.dev/aw/go-starter/internal/types"
 	"github.com/go-openapi/swag"
+	"github.com/mwieser/go-micro/internal/api/httperrors"
+	"github.com/mwieser/go-micro/internal/types"
 	"github.com/stretchr/testify/require"
 )
 

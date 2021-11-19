@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
 	"github.com/labstack/echo/v4"
+	"github.com/mwieser/go-micro/internal/api"
 )
 
 func GetHealthyRoute(s *api.Server) *echo.Route {
@@ -35,7 +35,7 @@ func getHealthyHandler(s *api.Server) echo.HandlerFunc {
 		ctx, cancel := context.WithTimeout(c.Request().Context(), s.Config.Management.LivenessTimeout)
 		defer cancel()
 
-		healthyStr, errs := ProbeLiveness(ctx, s.DB, s.Config.Management.ProbeWriteablePathsAbs, s.Config.Management.ProbeWriteableTouchfile)
+		healthyStr, errs := ProbeLiveness(ctx, s.Config.Management.ProbeWriteablePathsAbs, s.Config.Management.ProbeWriteableTouchfile)
 		str.WriteString(healthyStr)
 
 		// Finally return the health status according to the seen states

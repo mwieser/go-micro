@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/middleware"
-	"allaboutapps.dev/aw/go-starter/internal/test"
-	"allaboutapps.dev/aw/go-starter/internal/util"
 	"github.com/labstack/echo/v4"
+	"github.com/mwieser/go-micro/internal/api"
+	"github.com/mwieser/go-micro/internal/api/middleware"
+	"github.com/mwieser/go-micro/internal/test"
+	"github.com/mwieser/go-micro/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

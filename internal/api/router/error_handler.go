@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/api/httperrors"
-	"allaboutapps.dev/aw/go-starter/internal/types"
-	"allaboutapps.dev/aw/go-starter/internal/util"
 	"github.com/go-openapi/swag"
 	"github.com/labstack/echo/v4"
+	"github.com/mwieser/go-micro/internal/api/httperrors"
+	"github.com/mwieser/go-micro/internal/types"
+	"github.com/mwieser/go-micro/internal/util"
 )
 
 var (

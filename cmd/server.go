@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/router"
-	"allaboutapps.dev/aw/go-starter/internal/config"
+	"github.com/mwieser/go-micro/internal/api"
+	"github.com/mwieser/go-micro/internal/api/router"
+	"github.com/mwieser/go-micro/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -39,28 +39,8 @@ and a fully migrated PostgreSQL database.`,
 			os.Exit(1)
 		}
 
-		applyMigrations, err := cmd.Flags().GetBool(migrateFlag)
-		if err != nil {
-			fmt.Printf("Error while parsing flags: %v\n", err)
-			os.Exit(1)
-		}
-
-		seedFixtures, err := cmd.Flags().GetBool(seedFlag)
-		if err != nil {
-			fmt.Printf("Error while parsing flags: %v\n", err)
-			os.Exit(1)
-		}
-
 		if probeReadiness {
 			runReadiness(true)
-		}
-
-		if applyMigrations {
-			migrateCmdFunc(cmd, args)
-		}
-
-		if seedFixtures {
-			seedCmdFunc(cmd, args)
 		}
 
 		runServer()
@@ -87,21 +67,6 @@ func runServer() {
 
 	s := api.NewServer(config)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := s.InitDB(ctx); err != nil {
-		cancel()
-		log.Fatal().Err(err).Msg("Failed to initialize database")
-	}
-	cancel()
-
-	if err := s.InitMailer(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize mailer")
-	}
-
-	if err := s.InitPush(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize push service")
-	}
-
 	router.Init(s)
 
 	go func() {
@@ -118,7 +83,7 @@ func runServer() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := s.Shutdown(ctx); err != nil && err != http.ErrServerClosed {

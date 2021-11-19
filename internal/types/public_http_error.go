@@ -14,10 +14,14 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// PublicHTTPError public Http error
+// PublicHTTPError public HTTP error
 //
-// swagger:model publicHttpError
+// swagger:model PublicHTTPError
 type PublicHTTPError struct {
+
+	// More detailed, human-readable, optional explanation of the error
+	// Example: User is lacking permission to access this resource
+	Detail string `json:"detail,omitempty"`
 
 	// HTTP status code returned for the error
 	// Example: 403
@@ -25,10 +29,6 @@ type PublicHTTPError struct {
 	// Maximum: 599
 	// Minimum: 100
 	Code *int64 `json:"status"`
-
-	// More detailed, human-readable, optional explanation of the error
-	// Example: User is lacking permission to access this resource
-	Detail string `json:"detail,omitempty"`
 
 	// Short, human-readable description of the error
 	// Example: Forbidden
@@ -41,7 +41,7 @@ type PublicHTTPError struct {
 	Type *string `json:"type"`
 }
 
-// Validate validates this public Http error
+// Validate validates this public HTTP error
 func (m *PublicHTTPError) Validate(formats strfmt.Registry) error {
 	var res []error
 
@@ -98,7 +98,7 @@ func (m *PublicHTTPError) validateType(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this public Http error based on context it is used
+// ContextValidate validates this public HTTP error based on context it is used
 func (m *PublicHTTPError) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }

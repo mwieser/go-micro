@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
 	"github.com/labstack/echo/v4"
+	"github.com/mwieser/go-micro/internal/api"
 )
 
 func GetReadyRoute(s *api.Server) *echo.Route {
@@ -30,7 +30,7 @@ func getReadyHandler(s *api.Server) echo.HandlerFunc {
 		ctx, cancel := context.WithTimeout(c.Request().Context(), s.Config.Management.ReadinessTimeout)
 		defer cancel()
 
-		_, errs := ProbeReadiness(ctx, s.DB, s.Config.Management.ProbeWriteablePathsAbs)
+		_, errs := ProbeReadiness(ctx, s.Config.Management.ProbeWriteablePathsAbs)
 
 		// Finally return the health status according to the seen states
 		if ctx.Err() != nil || len(errs) != 0 {

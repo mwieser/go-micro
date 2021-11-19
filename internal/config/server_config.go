@@ -2,13 +2,10 @@ package config
 
 import (
 	"path/filepath"
-	"runtime"
 	"sync"
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/mailer/transport"
-	"allaboutapps.dev/aw/go-starter/internal/push/provider"
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/mwieser/go-micro/internal/util"
 	"github.com/rs/zerolog"
 )
 
@@ -90,18 +87,13 @@ type LoggerServer struct {
 }
 
 type Server struct {
-	Database   Database
 	Echo       EchoServer
 	Pprof      PprofServer
 	Paths      PathsServer
 	Auth       AuthServer
 	Management ManagementServer
-	Mailer     Mailer
-	SMTP       transport.SMTPMailTransportConfig
 	Frontend   FrontendServer
 	Logger     LoggerServer
-	Push       PushService
-	FCMConfig  provider.FCMConfig
 }
 
 // DefaultServiceConfigFromEnv returns the server config as parsed from environment variables
@@ -113,19 +105,6 @@ type Server struct {
 func DefaultServiceConfigFromEnv() Server {
 	configOnce.Do(func() {
 		config = Server{
-			Database: Database{
-				Host:     util.GetEnv("PGHOST", "postgres"),
-				Port:     util.GetEnvAsInt("PGPORT", 5432),
-				Database: util.GetEnv("PGDATABASE", "development"),
-				Username: util.GetEnv("PGUSER", "dbuser"),
-				Password: util.GetEnv("PGPASSWORD", ""),
-				AdditionalParams: map[string]string{
-					"sslmode": util.GetEnv("PGSSLMODE", "disable"),
-				},
-				MaxOpenConns:    util.GetEnvAsInt("DB_MAX_OPEN_CONNS", runtime.NumCPU()*2),
-				MaxIdleConns:    util.GetEnvAsInt("DB_MAX_IDLE_CONNS", 1),
-				ConnMaxLifetime: time.Second * time.Duration(util.GetEnvAsInt("DB_CONN_MAX_LIFETIME_SEC", 60)),
-			},
 			Echo: EchoServer{
 				Debug:                          util.GetEnvAsBool("SERVER_ECHO_DEBUG", false),
 				ListenAddress:                  util.GetEnv("SERVER_ECHO_LISTEN_ADDRESS", ":8080"),
@@ -178,21 +157,6 @@ func DefaultServiceConfigFromEnv() Server {
 					filepath.Join(util.GetProjectRootDir(), "/assets/mnt")}, ","),
 				ProbeWriteableTouchfile: util.GetEnv("SERVER_MANAGEMENT_PROBE_WRITEABLE_TOUCHFILE", ".healthy"),
 			},
-			Mailer: Mailer{
-				DefaultSender:               util.GetEnv("SERVER_MAILER_DEFAULT_SENDER", "go-starter@example.com"),
-				Send:                        util.GetEnvAsBool("SERVER_MAILER_SEND", true),
-				WebTemplatesEmailBaseDirAbs: util.GetEnv("SERVER_MAILER_WEB_TEMPLATES_EMAIL_BASE_DIR_ABS", filepath.Join(util.GetProjectRootDir(), "/web/templates/email")), // /app/web/templates/email
-				Transporter:                 util.GetEnvEnum("SERVER_MAILER_TRANSPORTER", MailerTransporterMock.String(), []string{MailerTransporterSMTP.String(), MailerTransporterMock.String()}),
-			},
-			SMTP: transport.SMTPMailTransportConfig{
-				Host:      util.GetEnv("SERVER_SMTP_HOST", "mailhog"),
-				Port:      util.GetEnvAsInt("SERVER_SMTP_PORT", 1025),
-				Username:  util.GetEnv("SERVER_SMTP_USERNAME", ""),
-				Password:  util.GetEnv("SERVER_SMTP_PASSWORD", ""),
-				AuthType:  transport.SMTPAuthTypeFromString(util.GetEnv("SERVER_SMTP_AUTH_TYPE", transport.SMTPAuthTypeNone.String())),
-				UseTLS:    util.GetEnvAsBool("SERVER_SMTP_USE_TLS", false),
-				TLSConfig: nil,
-			},
 			Frontend: FrontendServer{
 				BaseURL:               util.GetEnv("SERVER_FRONTEND_BASE_URL", "http://localhost:3000"),
 				PasswordResetEndpoint: util.GetEnv("SERVER_FRONTEND_PASSWORD_RESET_ENDPOINT", "/set-new-password"),
@@ -206,15 +170,6 @@ func DefaultServiceConfigFromEnv() Server {
 				LogResponseBody:    util.GetEnvAsBool("SERVER_LOGGER_LOG_RESPONSE_BODY", false),
 				LogResponseHeader:  util.GetEnvAsBool("SERVER_LOGGER_LOG_RESPONSE_HEADER", false),
 				PrettyPrintConsole: util.GetEnvAsBool("SERVER_LOGGER_PRETTY_PRINT_CONSOLE", false),
-			},
-			Push: PushService{
-				UseFCMProvider:  util.GetEnvAsBool("SERVER_PUSH_USE_FCM", false),
-				UseMockProvider: util.GetEnvAsBool("SERVER_PUSH_USE_MOCK", true),
-			},
-			FCMConfig: provider.FCMConfig{
-				GoogleApplicationCredentials: util.GetEnv("GOOGLE_APPLICATION_CREDENTIALS", ""),
-				ProjectID:                    util.GetEnv("SERVER_FCM_PROJECT_ID", "no-fcm-project-id-set"),
-				ValidateOnly:                 util.GetEnvAsBool("SERVER_FCM_VALIDATE_ONLY", true),
 			},
 		}
 

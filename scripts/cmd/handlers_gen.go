@@ -5,7 +5,7 @@ package cmd
 import (
 	"log"
 
-	"allaboutapps.dev/aw/go-starter/scripts/internal/handlers"
+	"github.com/mwieser/go-micro/scripts/internal/handlers"
 	"github.com/spf13/cobra"
 )
 

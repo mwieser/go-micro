@@ -14,9 +14,9 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// HTTPValidationErrorDetail http validation error detail
+// HTTPValidationErrorDetail HTTP validation error detail
 //
-// swagger:model httpValidationErrorDetail
+// swagger:model HTTPValidationErrorDetail
 type HTTPValidationErrorDetail struct {
 
 	// Error describing field validation failure
@@ -32,7 +32,7 @@ type HTTPValidationErrorDetail struct {
 	Key *string `json:"key"`
 }
 
-// Validate validates this http validation error detail
+// Validate validates this HTTP validation error detail
 func (m *HTTPValidationErrorDetail) Validate(formats strfmt.Registry) error {
 	var res []error
 
@@ -81,7 +81,7 @@ func (m *HTTPValidationErrorDetail) validateKey(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this http validation error detail based on context it is used
+// ContextValidate validates this HTTP validation error detail based on context it is used
 func (m *HTTPValidationErrorDetail) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }

@@ -2,30 +2,21 @@ package common
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"path"
 	"strings"
 	"sync"
 	"time"
 
-	"allaboutapps.dev/aw/go-starter/internal/util"
+	"github.com/mwieser/go-micro/internal/util"
 	"golang.org/x/sys/unix"
 )
 
-func ProbeReadiness(ctx context.Context, database *sql.DB, writeablePaths []string) (string, []error) {
+func ProbeReadiness(ctx context.Context, writeablePaths []string) (string, []error) {
 	var str strings.Builder
 
 	// slice collects all errors from probes
 	errs := make([]error, 0, 1+len(writeablePaths))
-
-	// DB readable?
-	dbPingStr, dbPingErr := probeDatabasePingable(ctx, database)
-	str.WriteString(dbPingStr)
-
-	if dbPingErr != nil {
-		errs = append(errs, dbPingErr)
-	}
 
 	// FS (potentially) writeable?
 	for _, writeablePath := range writeablePaths {
@@ -43,10 +34,10 @@ func ProbeReadiness(ctx context.Context, database *sql.DB, writeablePaths []stri
 	return str.String(), errs
 }
 
-func ProbeLiveness(ctx context.Context, database *sql.DB, writeablePaths []string, touch string) (string, []error) {
+func ProbeLiveness(ctx context.Context, writeablePaths []string, touch string) (string, []error) {
 
 	// fail immediately if any readiness probes above have already failed.
-	readinessProbeStr, readinessProbeErrs := ProbeReadiness(ctx, database, writeablePaths)
+	readinessProbeStr, readinessProbeErrs := ProbeReadiness(ctx, writeablePaths)
 
 	if len(readinessProbeErrs) != 0 {
 		return readinessProbeStr, readinessProbeErrs
@@ -59,14 +50,6 @@ func ProbeLiveness(ctx context.Context, database *sql.DB, writeablePaths []strin
 
 	// slice collects all errors from probes
 	errs := make([]error, 0, 1+len(writeablePaths))
-
-	// DB writeable?
-	dbHealthStr, dbHealthErr := probeDatabaseNextHealthSequence(ctx, database)
-	str.WriteString(dbHealthStr)
-
-	if dbHealthErr != nil {
-		errs = append(errs, dbHealthErr)
-	}
 
 	// FS writeable?
 	for _, writeablePath := range writeablePaths {
@@ -94,67 +77,6 @@ func ensureProbeDeadlineFromContext(ctx context.Context) time.Time {
 	}
 
 	return ctxDeadline
-}
-
-func probeDatabasePingable(ctx context.Context, database *sql.DB) (string, error) {
-	var str strings.Builder
-	ctxDeadline := ensureProbeDeadlineFromContext(ctx)
-
-	dbPingStart := time.Now()
-
-	var dbPingWg sync.WaitGroup
-	var dbErr error
-
-	dbPingWg.Add(1)
-	go func() {
-		dbErr = database.PingContext(ctx)
-		dbPingWg.Done()
-	}()
-
-	if err := util.WaitTimeout(&dbPingWg, time.Until(ctxDeadline)); err != nil {
-		fmt.Fprintf(&str, "Probe db: Ping deadline after %s, error=%v.\n", time.Since(dbPingStart), err.Error())
-		return str.String(), err
-	}
-
-	if dbErr != nil {
-		fmt.Fprintf(&str, "Probe db: Ping errored after %s, error=%v.\n", time.Since(dbPingStart), dbErr.Error())
-		return str.String(), dbErr
-	}
-
-	fmt.Fprintf(&str, "Probe db: Ping succeeded in %s.\n", time.Since(dbPingStart))
-
-	return str.String(), nil
-}
-
-func probeDatabaseNextHealthSequence(ctx context.Context, database *sql.DB) (string, error) {
-	var str strings.Builder
-	ctxDeadline := ensureProbeDeadlineFromContext(ctx)
-
-	dbWriteStart := time.Now()
-
-	var seqVal int
-	var dbWriteWg sync.WaitGroup
-	var dbErr error
-
-	dbWriteWg.Add(1)
-	go func() {
-		dbErr = database.QueryRowContext(ctx, "SELECT nextval('seq_health');").Scan(&seqVal)
-		dbWriteWg.Done()
-	}()
-
-	if err := util.WaitTimeout(&dbWriteWg, time.Until(ctxDeadline)); err != nil {
-		fmt.Fprintf(&str, "Probe db: Next health sequence deadline after %s, error=%v.\n", time.Since(dbWriteStart), err.Error())
-		return str.String(), err
-	}
-
-	if dbErr != nil {
-		fmt.Fprintf(&str, "Probe db: Next health sequence errored after %s, error=%v.\n", time.Since(dbWriteStart), dbErr.Error())
-		return str.String(), dbErr
-	}
-
-	fmt.Fprintf(&str, "Probe db: Next health sequence succeeded in %s, seq_health=%v.\n", time.Since(dbWriteStart), seqVal)
-
-	return str.String(), nil
 }
 
 func probePathWriteablePermission(ctx context.Context, writeablePath string) (string, error) {

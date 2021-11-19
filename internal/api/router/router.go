@@ -5,11 +5,11 @@ import (
 	"runtime"
 	"strings"
 
-	"allaboutapps.dev/aw/go-starter/internal/api"
-	"allaboutapps.dev/aw/go-starter/internal/api/handlers"
-	"allaboutapps.dev/aw/go-starter/internal/api/middleware"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/mwieser/go-micro/internal/api"
+	"github.com/mwieser/go-micro/internal/api/handlers"
+	"github.com/mwieser/go-micro/internal/api/middleware"
 	"github.com/rs/zerolog/log"
 
 	// #nosec G108 - pprof handlers (conditionally made available via http.DefaultServeMux)
@@ -167,26 +167,6 @@ func Init(s *api.Server) {
 				return false
 			},
 		}), middleware.NoCache()),
-
-		// OAuth2, unsecured or secured by bearer auth, available at /api/v1/auth/**
-		APIV1Auth: s.Echo.Group("/api/v1/auth", middleware.AuthWithConfig(middleware.AuthConfig{
-			S:    s,
-			Mode: middleware.AuthModeRequired,
-			Skipper: func(c echo.Context) bool {
-				switch c.Path() {
-				case "/api/v1/auth/forgot-password",
-					"/api/v1/auth/forgot-password/complete",
-					"/api/v1/auth/login",
-					"/api/v1/auth/refresh",
-					"/api/v1/auth/register":
-					return true
-				}
-				return false
-			},
-		})),
-
-		// Your other endpoints, typically secured by bearer auth, available at /api/v1/**
-		APIV1Push: s.Echo.Group("/api/v1/push", middleware.Auth(s)),
 	}
 
 	// ---
