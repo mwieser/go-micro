@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/allaboutapps/nullable v1.3.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/gabriel-vasile/mimetype v1.3.1
+	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-openapi/errors v0.20.1
 	github.com/go-openapi/runtime v0.19.31
 	github.com/go-openapi/strfmt v0.20.2
