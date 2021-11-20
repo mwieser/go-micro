@@ -15,4 +15,6 @@ import (
 	_ "github.com/spf13/cobra/cobra"
 	_ "github.com/volatiletech/sqlboiler/v4"
 	_ "github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql"
+	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1"
+	_ "google.golang.org/protobuf/cmd/protoc-gen-go@v1.26"
 )

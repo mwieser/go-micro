@@ -3,18 +3,21 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/mwieser/go-micro/api/grpc/hello"
 	"github.com/mwieser/go-micro/internal/api"
 	"github.com/mwieser/go-micro/internal/api/router"
 	"github.com/mwieser/go-micro/internal/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -70,12 +73,27 @@ func runServer() {
 	router.Init(s)
 
 	go func() {
-		if err := s.Start(); err != nil {
+		if err := s.StartHTTP(); err != nil {
 			if err == http.ErrServerClosed {
 				log.Info().Msg("Server closed")
 			} else {
 				log.Fatal().Err(err).Msg("Failed to start server")
 			}
+		}
+	}()
+
+	go func() {
+		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", config.GRPC.Port))
+		if err != nil {
+			log.Fatal().Err(err).Int("port", config.GRPC.Port).Msg("failed to listen to port")
+		}
+
+		grpcServer := grpc.NewServer()
+		hello.RegisterGreeterServer(grpcServer, s)
+
+		log.Debug().Int("port", config.GRPC.Port).Msg("Listening to port for gRPC requests")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatal().Err(err).Msg("Failed to serve")
 		}
 	}()
 

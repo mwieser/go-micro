@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/labstack/echo/v4"
+	"github.com/mwieser/go-micro/api/grpc/hello"
 	"github.com/mwieser/go-micro/internal/config"
 	"github.com/rs/zerolog/log"
 
@@ -19,6 +20,7 @@ type Router struct {
 }
 
 type Server struct {
+	hello.UnimplementedGreeterServer
 	Config config.Server
 	Echo   *echo.Echo
 	Router *Router
@@ -39,7 +41,7 @@ func (s *Server) Ready() bool {
 		s.Router != nil
 }
 
-func (s *Server) Start() error {
+func (s *Server) StartHTTP() error {
 	if !s.Ready() {
 		return errors.New("server is not ready")
 	}

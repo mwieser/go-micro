@@ -57,6 +57,7 @@ RUN apt-get update \
     xz-utils \
     postgresql-client-12 \
     icu-devtools \
+    protobuf-compiler \
     # --- END DEVELOPMENT ---
     # 
     && apt-get clean \

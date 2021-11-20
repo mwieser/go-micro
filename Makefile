@@ -203,6 +203,13 @@ check-embedded-modules-go-not: ##- (opt) Checks embedded modules in compiled bin
 	grep -f go.not -F tmp/.modules && (echo "go.not: Found disallowed embedded module(s) in bin/app!" && exit 1) || exit 0
 
 ### -----------------------
+# --- gRCP
+### -----------------------
+grpc:
+	protoc --go_out=. --go-grpc_out=. api/grpc/*.proto
+
+
+### -----------------------
 # --- Git related
 ### -----------------------
 

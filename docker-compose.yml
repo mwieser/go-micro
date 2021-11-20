@@ -24,33 +24,9 @@ services:
       - vscode-extensions:/home/development/.vscode-server/extensions
       - vscode-extensions-insiders:/home/development/.vscode-server-insiders/extensions
 
-    depends_on:
-      - postgres
-      - integresql
     environment:
-      # required: env for main working database, service
-      # default for sql-migrate (target development) and psql cli tool
-      PGDATABASE: &PGDATABASE "development"
-      PGUSER: &PGUSER "dbuser"
-      PGPASSWORD: &PGPASSWORD "dbpass"
-      PGHOST: &PGHOST "postgres"
-      PGPORT: &PGPORT "5432"
-      PGSSLMODE: &PGSSLMODE "disable"
-
-      # optional: env for sql-boiler (ability to generate models out of a "spec" database)
-      # sql-boiler should operate on a "spec" database only
-      PSQL_DBNAME: "spec"
-      PSQL_USER: *PGUSER
-      PSQL_PASS: *PGPASSWORD
-      PSQL_HOST: *PGHOST
-      PSQL_PORT: *PGPORT
-      PSQL_SSLMODE: *PGSSLMODE
-
       # optional: project root directory, used for relative path resolution (e.g. fixtures)
       PROJECT_ROOT_DIR: *PROJECT_ROOT_DIR
-
-      # optional: env for integresql client testing
-      # INTEGRESQL_CLIENT_BASE_URL: "http://integresql:5000/api"
 
       # optional: enable pretty print of log output
       # intended use is for development and debugging purposes only
@@ -69,46 +45,6 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 1000; do :; done"
 
-  postgres:
-    image: postgres:12.4-alpine # should be the same version as used in .drone.yml, .github/workflows, Dockerfile and live
-    # ATTENTION
-    # fsync=off, synchronous_commit=off and full_page_writes=off
-    # gives us a major speed up during local development and testing (~30%),
-    # however you should NEVER use these settings in PRODUCTION unless
-    # you want to have CORRUPTED data.
-    # DO NOT COPY/PASTE THIS BLINDLY.
-    # YOU HAVE BEEN WARNED.
-    # Apply some performance improvements to pg as these guarantees are not needed while running locally
-    command: "postgres -c 'shared_buffers=128MB' -c 'fsync=off' -c 'synchronous_commit=off' -c 'full_page_writes=off' -c 'max_connections=100' -c 'client_min_messages=warning'"
-    expose:
-      - "5432"
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: *PGDATABASE
-      POSTGRES_USER: *PGUSER
-      POSTGRES_PASSWORD: *PGPASSWORD
-    volumes:
-      - pgvolume:/var/lib/postgresql/data
-
-  integresql:
-    image: allaboutapps/integresql:1.0.0
-    ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
-    environment:
-      PGHOST: *PGHOST
-      PGUSER: *PGUSER
-      PGPASSWORD: *PGPASSWORD
-
-  mailhog:
-    image: mailhog/mailhog
-    expose:
-      - "1025"
-    ports:
-      - "8025:8025"
-
   swaggerui:
     image: swaggerapi/swagger-ui:v3.46.0
     environment:
@@ -119,22 +55,12 @@ services:
       # mount overwritten translator.js (intercept requests port 8081 to our local service on port 8080)
       - ./api/config/swagger-ui-local-translator.js:/usr/share/nginx/configurator/translator.js:ro,delegated
 
-  swaggerui-browser-sync:
-    image: allaboutapps/browser-sync:v2.26.14
-    command: start --proxy 'swaggerui:8080' --port 8081 --files "/api/*.yml"
-    volumes:
-      - ./api:/api:ro,consistent
-    ports:
-      - "8081:8081"
-
 volumes:
-  # postgresql: declare a named volume to persist DB data
-  pgvolume:
-
   # go: go mod cached downloads
   go-pkg:
 
-  # vscode: Avoiding extension reinstalls on container rebuild
-  # https://code.visualstudio.com/docs/remote/containers-advanced#_avoiding-extension-reinstalls-on-container-rebuild
-  vscode-extensions:
-  vscode-extensions-insiders:
+    null
+    # vscode: Avoiding extension reinstalls on container rebuild
+    # https://code.visualstudio.com/docs/remote/containers-advanced#_avoiding-extension-reinstalls-on-container-rebuild
+  vscode-extensions: null
+  vscode-extensions-insiders: null

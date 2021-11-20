@@ -86,7 +86,12 @@ type LoggerServer struct {
 	PrettyPrintConsole bool
 }
 
+type GRPC struct {
+	Port int
+}
+
 type Server struct {
+	GRPC       GRPC
 	Echo       EchoServer
 	Pprof      PprofServer
 	Paths      PathsServer
@@ -105,6 +110,9 @@ type Server struct {
 func DefaultServiceConfigFromEnv() Server {
 	configOnce.Do(func() {
 		config = Server{
+			GRPC: GRPC{
+				Port: util.GetEnvAsInt("SERVER_GRPC_PORT", 50051),
+			},
 			Echo: EchoServer{
 				Debug:                          util.GetEnvAsBool("SERVER_ECHO_DEBUG", false),
 				ListenAddress:                  util.GetEnv("SERVER_ECHO_LISTEN_ADDRESS", ":8080"),
