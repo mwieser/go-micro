@@ -12,7 +12,7 @@ require (
 	github.com/go-openapi/swag v0.19.15
 	github.com/go-openapi/validate v0.20.2
 	github.com/labstack/echo/v4 v4.6.1
-	github.com/lib/pq v1.10.3
+	github.com/lib/pq v1.10.4
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/rogpeppe/go-internal v1.8.0
 	github.com/rs/zerolog v1.25.0
