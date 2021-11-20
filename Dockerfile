@@ -12,15 +12,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Our Makefile / env fully supports parallel job execution
 ENV MAKEFLAGS "-j 8 --no-print-directory"
 
-# postgresql-support: Add the official postgres repo to install the matching postgresql-client tools of your stack
-# https://wiki.postgresql.org/wiki/Apt
-# run lsb_release -c inside the container to pick the proper repository flavor
-# e.g. stretch=>stretch-pgdg, buster=>buster-pgdg
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" \
-    | tee /etc/apt/sources.list.d/pgdg.list \
-    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-    | apt-key add -
-
 # Install required system dependencies
 RUN apt-get update \
     && apt-get install -y \
@@ -55,7 +46,6 @@ RUN apt-get update \
     bsdmainutils \
     graphviz \
     xz-utils \
-    postgresql-client-12 \
     icu-devtools \
     protobuf-compiler \
     # --- END DEVELOPMENT ---
@@ -71,19 +61,6 @@ RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     update-locale LANG=en_US.UTF-8
 
 ENV LANG en_US.UTF-8
-
-# sql pgFormatter: Integrates with vscode-pgFormatter (we pin pgFormatter.pgFormatterPath for the extension to this version)
-# requires perl to be installed
-# https://github.com/bradymholt/vscode-pgFormatter/commits/master
-# https://github.com/darold/pgFormatter/releases
-RUN mkdir -p /tmp/pgFormatter \
-    && cd /tmp/pgFormatter \
-    && wget https://github.com/darold/pgFormatter/archive/v5.0.tar.gz \
-    && tar xzf v5.0.tar.gz \
-    && cd pgFormatter-5.0 \
-    && perl Makefile.PL \
-    && make && make install \
-    && rm -rf /tmp/pgFormatter 
 
 # go gotestsum: (this package should NOT be installed via go get)
 # https://github.com/gotestyourself/gotestsum/releases
@@ -110,15 +87,6 @@ RUN curl -o /usr/local/bin/swagger -L'#' \
 # TODO: Install from static binary as soon as it becomes available.
 # https://github.com/uw-labs/lichen/releases
 RUN go install github.com/uw-labs/lichen@v0.1.4
-
-# watchexec
-# https://github.com/watchexec/watchexec/releases
-RUN mkdir -p /tmp/watchexec \
-    && cd /tmp/watchexec \
-    && wget https://github.com/watchexec/watchexec/releases/download/cli-v1.17.0/watchexec-1.17.0-x86_64-unknown-linux-gnu.tar.xz \
-    && tar xf watchexec-1.17.0-x86_64-unknown-linux-gnu.tar.xz \
-    && cp watchexec-1.17.0-x86_64-unknown-linux-gnu/watchexec /usr/local/bin/watchexec \
-    && rm -rf /tmp/watchexec
 
 # gsdev
 # The sole purpose of the "gsdev" cli util is to provide a handy short command for the following (all args are passed):
@@ -211,7 +179,6 @@ FROM gcr.io/distroless/base-debian10:debug as app
 COPY --from=builder /app/bin/app /app/
 COPY --from=builder /app/api/swagger.yml /app/api/
 COPY --from=builder /app/assets /app/assets/
-COPY --from=builder /app/migrations /app/migrations/
 COPY --from=builder /app/web /app/web/
 
 WORKDIR /app
@@ -228,4 +195,4 @@ WORKDIR /app
 # docker run <image> server
 # docker run <image> server --migrate
 ENTRYPOINT ["/app/app"]
-CMD ["server", "--migrate"]
+CMD ["server"]
